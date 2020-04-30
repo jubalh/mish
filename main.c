@@ -18,6 +18,9 @@ static void execute(char **args) {
 	pid_t pid, wpid;
 	int status;
 
+	if (args[0] == NULL)
+		return;
+
 	pid = fork();
 
 	if (pid == 0) {
