@@ -38,11 +38,18 @@ static void execute(char **args) {
 
 int main(int argc, char** argv) {
 	char *buffer = NULL;
+	uid_t uid;
+
+	uid = getuid();
 
 	do {
 		if (buffer) free(buffer);
 
-		buffer = readline("> ");
+		if (uid == 0)
+			buffer = readline("\033[31m>\033[0m");
+		else
+			buffer = readline("\033[34m>\033[0m ");
+
 		if (g_strcmp0(buffer, "exit") == 0)
 			break;
 
