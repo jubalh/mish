@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <pwd.h>
 #include <sys/wait.h>
+#include <linux/limits.h>
 
 #define pname "mish"
 
@@ -40,7 +41,7 @@ static void execute(char **args) {
 	}
 }
 
-static gchar* base_prompt(void) {
+static gchar* get_base_prompt(void) {
 	uid_t uid = getuid();
 	int color_code = 34;
 
@@ -49,22 +50,33 @@ static gchar* base_prompt(void) {
 
 	struct passwd *pw = getpwuid(uid);
 	if (!pw) {
-			perror(pname);
-			exit(EXIT_FAILURE);
+		perror(pname);
+		exit(EXIT_FAILURE);
 	}
 
 	char host[1024];
 	if (gethostname(host, 1023) == -1) {
-			perror(pname);
-			exit(EXIT_FAILURE);
+		perror(pname);
+		exit(EXIT_FAILURE);
 	}
 
-	return g_strdup_printf("\033[%dm\033[1m%s\033[0m@%s> ", color_code, pw->pw_name, host);
+	return g_strdup_printf("\033[%dm\033[1m%s\033[0m@%s", color_code, pw->pw_name, host);
+}
+
+static gchar* get_prompt(gchar *prompt) {
+	char path[PATH_MAX];
+
+	if (!getcwd(path, PATH_MAX-1)) {
+		perror(pname);
+	}
+
+	return g_strdup_printf("%s \033[1m%s\033[0m > ", prompt, path);
 }
 
 int main(int argc, char** argv) {
 	char *buffer = NULL;
-	gchar *prompt = base_prompt();
+	gchar *baseprompt = get_base_prompt();
+	gchar *prompt = get_prompt(baseprompt);
 
 	do {
 		if (buffer) free(buffer);
@@ -79,6 +91,9 @@ int main(int argc, char** argv) {
 		if (g_strcmp0(tokens[0], "cd") == 0) {
 			if (chdir(tokens[1]) == -1) {
 				perror(pname);
+			} else {
+				g_free(prompt);
+				prompt = get_prompt(baseprompt);
 			}
 		} else {
 			execute(tokens);
@@ -88,6 +103,7 @@ int main(int argc, char** argv) {
 	} while(1);
 
 	free(buffer);
+	g_free(baseprompt);
 	g_free(prompt);
 
 	return EXIT_SUCCESS;
