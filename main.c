@@ -9,6 +9,7 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 #include <unistd.h>
+#include <pwd.h>
 #include <sys/wait.h>
 
 #define pname "mish"
@@ -36,19 +37,36 @@ static void execute(char **args) {
 	}
 }
 
+static gchar* base_prompt(void) {
+	uid_t uid = getuid();
+	int color_code = 34;
+
+	if (uid == 0)
+		color_code = 31;
+
+	struct passwd *pw = getpwuid(uid);
+	if (!pw) {
+			perror(pname);
+			exit(EXIT_FAILURE);
+	}
+
+	char host[1024];
+	if (gethostname(host, 1023) == -1) {
+			perror(pname);
+			exit(EXIT_FAILURE);
+	}
+
+	return g_strdup_printf("\033[%dm\033[1m%s\033[0m@%s> ", color_code, pw->pw_name, host);
+}
+
 int main(int argc, char** argv) {
 	char *buffer = NULL;
-	uid_t uid;
-
-	uid = getuid();
+	gchar *prompt = base_prompt();
 
 	do {
 		if (buffer) free(buffer);
 
-		if (uid == 0)
-			buffer = readline("\033[31m>\033[0m");
-		else
-			buffer = readline("\033[34m>\033[0m ");
+		buffer = readline(prompt);
 
 		if (g_strcmp0(buffer, "exit") == 0)
 			break;
@@ -59,6 +77,7 @@ int main(int argc, char** argv) {
 	} while(1);
 
 	free(buffer);
+	g_free(prompt);
 
 	return EXIT_SUCCESS;
 }
