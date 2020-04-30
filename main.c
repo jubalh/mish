@@ -12,6 +12,7 @@
 #include <pwd.h>
 #include <sys/wait.h>
 #include <linux/limits.h>
+#include "config.h"
 
 #define pname "mish"
 
@@ -87,7 +88,7 @@ static gchar* get_prompt(gchar *prompt) {
 			home ? home : path);
 }
 
-int main(int argc, char** argv) {
+static int shell(void) {
 	char *buffer = NULL;
 	gchar *baseprompt = get_base_prompt();
 	gchar *prompt = get_prompt(baseprompt);
@@ -121,4 +122,37 @@ int main(int argc, char** argv) {
 	g_free(prompt);
 
 	return EXIT_SUCCESS;
+}
+
+int main(int argc, char** argv) {
+  static gboolean version = FALSE;
+
+	static GOptionEntry entries[] =
+	{
+		{ "version", 'v', 0, G_OPTION_ARG_NONE, &version, "Show version", NULL },
+		{ NULL }
+	};
+
+	GError *error = NULL;
+	GOptionContext *context;
+
+	context = g_option_context_new(NULL);
+	g_option_context_add_main_entries(context, entries, NULL);
+	if (!g_option_context_parse(context, &argc, &argv, &error)) {
+		g_print("%s\n", error->message);
+		g_option_context_free(context);
+		g_error_free(error);
+		return 1;
+	}
+	g_option_context_free(context);
+
+	if (version) {
+		g_print("mish shell, version %s\n", VERSION);
+		g_print("Copyright (C) 2020 Michael Vetter <jubalh@iodoru.org>.\n");
+		g_print("License GPLv3+: GNU GPL version 3 or later <https://www.gnu.org/licenses/gpl.html>\n\n");
+		g_print("This is free software; you are free to change and redistribute it.\n");
+		g_print("There is NO WARRANTY, to the extent permitted by law.\n");
+	}
+
+	return shell();
 }
