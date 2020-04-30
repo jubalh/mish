@@ -70,7 +70,21 @@ static gchar* get_prompt(gchar *prompt) {
 		perror(pname);
 	}
 
-	return g_strdup_printf("%s \033[1m%s\033[0m > ", prompt, path);
+	struct passwd *pw = getpwuid(getuid());
+	if (!pw) {
+		perror(pname);
+		exit(EXIT_FAILURE);
+	}
+
+	char *home = NULL;
+	if (g_str_has_prefix(path, pw->pw_dir)) {
+		home = &path[strlen(pw->pw_dir)];
+	}
+
+	return g_strdup_printf("%s \033[1m%s%s\033[0m > ",
+			prompt,
+			home ? "~" : "",
+			home ? home : path);
 }
 
 int main(int argc, char** argv) {
