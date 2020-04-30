@@ -75,7 +75,15 @@ int main(int argc, char** argv) {
 			break;
 
 		char ** tokens = g_strsplit(buffer, " ", 0);
-		execute(tokens);
+
+		if (g_strcmp0(tokens[0], "cd") == 0) {
+			if (chdir(tokens[1]) == -1) {
+				perror(pname);
+			}
+		} else {
+			execute(tokens);
+		}
+
 		g_strfreev(tokens);
 	} while(1);
 
